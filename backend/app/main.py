@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from app.api.v1.api_router import api_v1_router
 from app.core.config import settings
 from app.core.db import check_db_connection, check_pgvector_extension
+from app.core.idempotency import IdempotencyMiddleware
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("talentloop.main")
@@ -47,6 +48,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Idempotency Middleware for 24h key deduplication
+app.add_middleware(IdempotencyMiddleware)
 
 
 @app.exception_handler(HTTPException)

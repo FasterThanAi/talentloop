@@ -1,5 +1,3 @@
-from typing import List
-
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
@@ -8,11 +6,12 @@ from app.jobs.runner import enqueue_job
 from app.jobs.sourcing import get_rizeos_pool_candidates, parse_csv_candidates, parse_zip_resumes
 from app.models import User
 from app.schemas.candidate import SourcingURLsRequest
+from app.schemas.common import JobResponse
 
 router = APIRouter(prefix="/requisitions/{requisition_id}/source", tags=["Sourcing"])
 
 
-@router.post("/csv", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/csv", response_model=JobResponse, status_code=status.HTTP_202_ACCEPTED)
 async def source_from_file(
     requisition_id: str,
     file: UploadFile = File(...),
@@ -29,7 +28,16 @@ async def source_from_file(
         candidates = parse_csv_candidates(text_content)
 
     if not candidates:
-        raise HTTPException(status_code=400, detail="No valid candidates found in uploaded file.")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "type": "about:blank",
+                "title": "Invalid file content",
+                "status": 400,
+                "detail": "No valid candidates found in uploaded file.",
+                "code": "EMPTY_CANDIDATE_FILE"
+            }
+        )
 
     job_id = await enqueue_job("source_candidates", {
         "org_id": current_user.org_id,
@@ -38,10 +46,10 @@ async def source_from_file(
         "total": len(candidates)
     })
 
-    return {"job_id": job_id, "status": "queued", "count": len(candidates)}
+    return JobResponse(job_id=job_id, status="queued", count=len(candidates))
 
 
-@router.post("/urls", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/urls", response_model=JobResponse, status_code=status.HTTP_202_ACCEPTED)
 async def source_from_urls(
     requisition_id: str,
     req_body: SourcingURLsRequest,
@@ -53,7 +61,6 @@ async def source_from_urls(
         url_clean = url.strip()
         if not url_clean:
             continue
-        # Extract name from url or default
         name_guess = url_clean.rstrip("/").split("/")[-1].replace("-", " ").title()
         candidates.append({
             "full_name": name_guess,
@@ -64,7 +71,16 @@ async def source_from_urls(
         })
 
     if not candidates:
-        raise HTTPException(status_code=400, detail="No URLs provided")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "type": "about:blank",
+                "title": "Missing URLs",
+                "status": 400,
+                "detail": "No URLs provided for candidate sourcing.",
+                "code": "MISSING_SOURCING_URLS"
+            }
+        )
 
     job_id = await enqueue_job("source_candidates", {
         "org_id": current_user.org_id,
@@ -73,10 +89,10 @@ async def source_from_urls(
         "total": len(candidates)
     })
 
-    return {"job_id": job_id, "status": "queued", "count": len(candidates)}
+    return JobResponse(job_id=job_id, status="queued", count=len(candidates))
 
 
-@router.post("/rizeos-pool", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/rizeos-pool", response_model=JobResponse, status_code=status.HTTP_202_ACCEPTED)
 async def source_from_rizeos_pool(
     requisition_id: str,
     current_user: User = Depends(require_scope("recruiter")),
@@ -89,4 +105,4 @@ async def source_from_rizeos_pool(
         "candidates": candidates,
         "total": len(candidates)
     })
-    return {"job_id": job_id, "status": "queued", "count": len(candidates)}
+    return JobResponse(job_id=job_id, status="queued", count=len(candidates))

@@ -1,31 +1,30 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class CandidateCreate(BaseModel):
     full_name: str
     email: EmailStr
-    phone: str | None = None
+    phone: Optional[str] = None
     source: str = "manual"
-    public_urls: list[str] = []
+    public_urls: List[str] = []
 
 
 class CandidateResearchOut(BaseModel):
     id: str
     candidate_id: str
     summary: str
-    skills: list[dict[str, Any]]
-    seniority_signals: list[dict[str, Any]]
-    projects: list[dict[str, Any]]
-    evidence_urls: list[str]
+    skills: List[Dict[str, Any]]
+    seniority_signals: List[Dict[str, Any]]
+    projects: List[Dict[str, Any]]
+    evidence_urls: List[str]
     confidence: str
-    could_not_determine: list[str]
+    could_not_determine: List[str]
     researched_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CandidateOut(BaseModel):
@@ -33,17 +32,31 @@ class CandidateOut(BaseModel):
     org_id: str
     full_name: str
     email: str
-    phone: str | None = None
+    phone: Optional[str] = None
     source: str
-    public_urls: list[str]
+    public_urls: List[str]
     consent_status: str
     do_not_contact: bool
     created_at: datetime
-    research: CandidateResearchOut | None = None
+    research: Optional[CandidateResearchOut] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CandidateExportOut(BaseModel):
+    candidate: CandidateOut
+    research: Optional[Dict[str, Any]] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CandidateDeleteResponse(BaseModel):
+    status: str = "deleted"
+    candidate_id: str
+    tombstone_created: bool = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SourcingURLsRequest(BaseModel):
-    urls: list[str]
+    urls: List[str]

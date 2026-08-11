@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -7,12 +7,12 @@ from sqlalchemy.orm import Session, joinedload
 from app.core.audit import write_audit
 from app.core.deps import get_current_user, get_db, require_scope
 from app.models import Candidate, CandidateResearch, User
-from app.schemas.candidate import CandidateCreate, CandidateOut
+from app.schemas.candidate import CandidateCreate, CandidateDeleteResponse, CandidateExportOut, CandidateOut
 
 router = APIRouter(prefix="/candidates", tags=["Candidates"])
 
 
-@router.get("", response_model=list[CandidateOut])
+@router.get("", response_model=List[CandidateOut])
 def list_candidates(
     limit: int = Query(50, le=200),
     offset: int = Query(0),
@@ -44,7 +44,16 @@ def get_candidate(
     )
     c = db.execute(stmt).scalar_one_or_none()
     if not c:
-        raise HTTPException(status_code=404, detail="Candidate not found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "type": "about:blank",
+                "title": "Candidate not found",
+                "status": 404,
+                "detail": f"Candidate with id {id} was not found.",
+                "code": "CANDIDATE_NOT_FOUND"
+            }
+        )
     return CandidateOut.model_validate(c)
 
 
@@ -57,10 +66,18 @@ def set_do_not_contact(
     stmt = select(Candidate).where(Candidate.id == id)
     c = db.execute(stmt).scalar_one_or_none()
     if not c:
-        raise HTTPException(status_code=404, detail="Candidate not found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "type": "about:blank",
+                "title": "Candidate not found",
+                "status": 404,
+                "detail": f"Candidate with id {id} was not found.",
+                "code": "CANDIDATE_NOT_FOUND"
+            }
+        )
 
     if c.do_not_contact:
-        # Attempting to unset or re-toggle is forbidden (irreversible invariant)
         raise HTTPException(
             status_code=409,
             detail={
@@ -90,7 +107,7 @@ def set_do_not_contact(
     return CandidateOut.model_validate(c)
 
 
-@router.get("/{id}/data-export")
+@router.get("/{id}/data-export", response_model=CandidateExportOut)
 def export_candidate_data(
     id: str,
     current_user: User = Depends(get_current_user),
@@ -105,7 +122,6 @@ def export_candidate_data(
     if not c:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
-    # If user is candidate, ensure it's their own record
     if current_user.role == "candidate" and current_user.email.lower() != c.email.lower():
         raise HTTPException(status_code=403, detail="Forbidden: You can only export your own data")
 
@@ -120,28 +136,22 @@ def export_candidate_data(
     )
     db.commit()
 
-    return {
-        "candidate": {
-            "id": c.id,
-            "full_name": c.full_name,
-            "email": c.email,
-            "phone": c.phone,
-            "source": c.source,
-            "public_urls": c.public_urls,
-            "consent_status": c.consent_status,
-            "do_not_contact": c.do_not_contact,
-            "created_at": c.created_at.isoformat()
-        },
-        "research": {
-            "summary": c.research.summary if c.research else None,
-            "skills": c.research.skills if c.research else [],
-            "projects": c.research.projects if c.research else [],
-            "evidence_urls": c.research.evidence_urls if c.research else []
-        } if c.research else None
-    }
+    research_dict = None
+    if c.research:
+        research_dict = {
+            "summary": c.research.summary,
+            "skills": c.research.skills,
+            "projects": c.research.projects,
+            "evidence_urls": c.research.evidence_urls
+        }
+
+    return CandidateExportOut(
+        candidate=CandidateOut.model_validate(c),
+        research=research_dict
+    )
 
 
-@router.delete("/{id}/data", status_code=status.HTTP_200_OK)
+@router.delete("/{id}/data", response_model=CandidateDeleteResponse, status_code=status.HTTP_200_OK)
 def delete_candidate_data(
     id: str,
     current_user: User = Depends(require_scope("recruiter")),
@@ -152,7 +162,6 @@ def delete_candidate_data(
     if not c:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
-    # Write tombstone audit event
     write_audit(
         db=db,
         org_id=c.org_id,
@@ -165,4 +174,4 @@ def delete_candidate_data(
 
     db.delete(c)
     db.commit()
-    return {"status": "deleted", "candidate_id": id, "tombstone_created": True}
+    return CandidateDeleteResponse(candidate_id=id, tombstone_created=True)

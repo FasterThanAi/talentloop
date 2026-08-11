@@ -1,5 +1,6 @@
 import pytest
 from fastapi import HTTPException
+
 from app.core.db import Base, SessionLocal, engine
 from app.core.guards import assert_contactable, require_approved
 from app.models import Candidate, Organization, OutreachMessage

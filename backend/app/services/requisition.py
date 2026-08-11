@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.ai.runner import AIValidationError, run_structured
 from app.core.audit import write_audit
 from app.core.deps import problem_detail_error
-from app.models import Requisition
+from app.models import Requisition, User
 from app.schemas.ai import IdealProfile
 from app.schemas.requisition import RequisitionCreate, RequisitionUpdate
 
@@ -74,3 +74,56 @@ async def parse_and_update_requisition(
             detail=f"Job description could not be structured: {e}",
             code="REQUISITION_PARSE_FAILED"
         ) from e
+
+
+async def parse_requisition_jd(
+    db: Session,
+    requisition_id: str,
+    user: User
+) -> IdealProfile:
+    _, profile, _ = await parse_and_update_requisition(
+        db=db,
+        requisition_id=requisition_id,
+        actor_id=user.id
+    )
+    return profile
+
+
+def update_requisition_profile(
+    db: Session,
+    requisition_id: str,
+    user: User,
+    data: RequisitionUpdate
+) -> Requisition:
+    stmt = select(Requisition).where(Requisition.id == requisition_id, Requisition.org_id == user.org_id)
+    req = db.execute(stmt).scalar_one_or_none()
+    if not req:
+        raise problem_detail_error(
+            status_code=404,
+            title="Requisition not found",
+            detail=f"Requisition {requisition_id} does not exist.",
+            code="REQUISITION_NOT_FOUND"
+        )
+
+    if data.title is not None:
+        req.title = data.title
+    if data.seniority is not None:
+        req.seniority = data.seniority
+    if data.location is not None:
+        req.location = data.location
+    if data.parsed_profile is not None:
+        req.parsed_profile = data.parsed_profile
+
+    write_audit(
+        db=db,
+        org_id=user.org_id,
+        actor_id=user.id,
+        action="requisition_updated",
+        entity="requisition",
+        entity_id=req.id,
+        payload={"title": req.title}
+    )
+
+    db.commit()
+    db.refresh(req)
+    return req
