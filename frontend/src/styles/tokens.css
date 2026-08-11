@@ -1,0 +1,13 @@
+:root {
+  --bg: #FFFFFF;
+  --surface: #F7F9FC;
+  --border: #E2E8F0;
+  --text: #0F172A;
+  --text-muted: #64748B;
+  --primary: #2563EB;
+  --primary-weak: #EFF4FF;
+  --success: #0F7A5A;
+  --warning: #B45309;
+  --danger: #B91C1C;
+  --evidence: #6D28D9;
+}
