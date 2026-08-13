@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Sparkles, AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import GoogleSignInButton from "../../components/ui/GoogleSignInButton";
 
 export const Login = () => {
   const [email, setEmail] = useState("demo@talentloop.dev");
@@ -86,6 +87,8 @@ export const Login = () => {
               {isLoading ? "Signing in..." : "Sign In"}
             </button>
           </form>
+
+          <GoogleSignInButton role="candidate" label="Sign in with Google" />
 
           {/* Quick Demo Credentials */}
           <div className="mt-6 pt-4 border-t border-border space-y-2">

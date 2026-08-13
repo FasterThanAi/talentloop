@@ -15,7 +15,9 @@ class OrganizationOut(BaseModel):
 
 
 class UserRegister(BaseModel):
-    org_name: str
+    # Optional: only employers belong to an organisation. A candidate registers as a person,
+    # and the backend gives them a private workspace so tenancy stays uniform.
+    org_name: str | None = None
     email: EmailStr
     password: str
     role: str = "recruiter"  # admin | recruiter | candidate

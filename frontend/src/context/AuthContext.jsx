@@ -51,6 +51,26 @@ export const AuthProvider = ({ children }) => {
     return res.user;
   };
 
+  /**
+   * Adopt a token minted elsewhere — currently the Google sign-in redirect.
+   * We store it, then immediately call /auth/me so the session is proven valid
+   * before the user is routed anywhere.
+   */
+  const adoptToken = async (accessToken) => {
+    localStorage.setItem("talentloop_token", accessToken);
+    try {
+      const userData = await api.get("/auth/me");
+      localStorage.setItem("talentloop_user", JSON.stringify(userData));
+      setUser(userData);
+      return userData;
+    } catch (err) {
+      localStorage.removeItem("talentloop_token");
+      localStorage.removeItem("talentloop_user");
+      setUser(null);
+      throw err;
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem("talentloop_token");
     localStorage.removeItem("talentloop_user");
@@ -58,7 +78,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, adoptToken }}>
       {children}
     </AuthContext.Provider>
   );

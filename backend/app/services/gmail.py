@@ -37,7 +37,8 @@ def get_oauth_flow() -> Flow | None:
     flow = Flow.from_client_config(
         client_config,
         scopes=GMAIL_SCOPES,
-        redirect_uri=settings.GMAIL_REDIRECT_URI
+        redirect_uri=settings.GMAIL_REDIRECT_URI,
+        autogenerate_code_verifier=False
     )
     return flow
 

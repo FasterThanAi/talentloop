@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     GMAIL_CLIENT_ID: str | None = None
     GMAIL_CLIENT_SECRET: str | None = None
     GMAIL_REDIRECT_URI: str = "http://127.0.0.1:8000/api/v1/auth/gmail/callback"
+    # Sign in with Google (identity) — same OAuth client, different scopes and redirect.
+    # This URI must also be registered in Google Cloud Console → Credentials.
+    GOOGLE_REDIRECT_URI: str = "http://127.0.0.1:8000/api/v1/auth/google/callback"
+    FRONTEND_URL: str = "http://localhost:5173"
     
     # Security
     JWT_SECRET: str = "talentloop-super-secret-jwt-key-2026-very-secure"

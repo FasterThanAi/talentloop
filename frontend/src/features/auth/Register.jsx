@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Sparkles, AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import GoogleSignInButton from "../../components/ui/GoogleSignInButton";
 
 export const Register = () => {
   const [orgName, setOrgName] = useState("");
@@ -11,6 +12,7 @@ export const Register = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
+  const isCandidate = role === "candidate";
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -18,7 +20,7 @@ export const Register = () => {
     setError("");
     setIsLoading(true);
     try {
-      await register(orgName, email, password, role);
+      await register(isCandidate ? null : orgName, email, password, role);
       if (role === "candidate") {
         navigate("/portal");
       } else {
@@ -38,7 +40,7 @@ export const Register = () => {
           <Sparkles className="w-6 h-6" />
         </div>
         <h2 className="text-2xl font-bold tracking-tight text-text">Create your TalentLoop Account</h2>
-        <p className="mt-1 text-sm text-text-muted">Start evaluating talent with explainable AI</p>
+        <p className="mt-1 text-sm text-text-muted">Explainable hiring — for employers and candidates alike</p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -51,19 +53,42 @@ export const Register = () => {
               </div>
             )}
 
+            {/* Account type first: it decides what else we need to ask for. */}
             <div>
               <label className="block text-xs font-semibold text-text uppercase tracking-wider mb-1">
-                Company / Organization
+                Account Type
               </label>
-              <input
-                type="text"
-                required
-                value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded-control text-sm bg-bg text-text focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Acme Technologies"
-              />
+              >
+                <option value="recruiter">I'm hiring — Recruiter / Employer</option>
+                <option value="candidate">I'm looking for a role — Candidate</option>
+              </select>
+              <p className="mt-1 text-[11px] text-text-muted">
+                {isCandidate
+                  ? "You'll get a private portal to read the feedback reports employers release to you."
+                  : "You'll get the recruiter console: requisitions, scoring and outreach."}
+              </p>
             </div>
+
+            {/* A candidate is a person, not a company — so we don't ask for one. */}
+            {!isCandidate && (
+              <div>
+                <label className="block text-xs font-semibold text-text uppercase tracking-wider mb-1">
+                  Company / Organization
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-control text-sm bg-bg text-text focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Acme Technologies"
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-semibold text-text uppercase tracking-wider mb-1">
@@ -93,20 +118,6 @@ export const Register = () => {
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-text uppercase tracking-wider mb-1">
-                Account Type
-              </label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-control text-sm bg-bg text-text focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="recruiter">Recruiter / Employer Account</option>
-                <option value="candidate">Candidate Account</option>
-              </select>
-            </div>
-
             <button
               type="submit"
               disabled={isLoading}
@@ -116,6 +127,8 @@ export const Register = () => {
               {isLoading ? "Creating account..." : "Register"}
             </button>
           </form>
+
+          <GoogleSignInButton role={role} label="Continue with Google" />
 
           <div className="mt-6 text-center text-xs text-text-muted">
             Already have an account?{" "}

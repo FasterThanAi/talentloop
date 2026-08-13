@@ -21,10 +21,26 @@ def register_user(db: Session, reg: UserRegister) -> tuple[User, str, str]:
             code="USER_ALREADY_EXISTS"
         )
 
-    # Create Organization
+    # Only employers belong to a company. A candidate is a person, not an organisation, so
+    # asking a student for a "Company / Organization" is wrong — we create a private
+    # workspace for them instead. Their feedback reports are resolved by email
+    # (see GET /me/feedback), so this never isolates them from an employer's evaluation.
+    is_candidate = reg.role == "candidate"
+    if is_candidate:
+        org_name = f"Candidate workspace — {reg.email.lower()}"
+    else:
+        if not reg.org_name or not reg.org_name.strip():
+            raise problem_detail_error(
+                status_code=422,
+                title="Organization required",
+                detail="Recruiter and admin accounts must supply a company or organization name.",
+                code="ORG_NAME_REQUIRED",
+            )
+        org_name = reg.org_name.strip()
+
     org = Organization(
-        name=reg.org_name,
-        plan="standard"
+        name=org_name,
+        plan="candidate" if is_candidate else "standard"
     )
     db.add(org)
     db.flush()

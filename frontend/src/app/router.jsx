@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import AppShell from "../components/ui/AppShell";
 import Login from "../features/auth/Login";
 import Register from "../features/auth/Register";
+import AuthCallback from "../features/auth/AuthCallback";
 import GmailConnect from "../features/auth/GmailConnect";
 import RequisitionList from "../features/requisitions/RequisitionList";
 import RequisitionDetail from "../features/requisitions/RequisitionDetail";
@@ -39,6 +40,7 @@ export const AppRoutes = () => {
       {/* Public routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/verify/:hash" element={<CredentialVerification />} />
       <Route path="/credentials/:hash/verify" element={<CredentialVerification />} />
 
