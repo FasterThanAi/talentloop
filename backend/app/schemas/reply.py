@@ -15,6 +15,10 @@ class ReplyOut(BaseModel):
     summary: str
     suggested_action: str
     response_draft: dict[str, Any] | None = None
+    response_status: str = "none"
+    response_approved_by: str | None = None
+    response_approved_at: datetime | None = None
+    response_sent_at: datetime | None = None
     received_at: datetime
 
     class Config:

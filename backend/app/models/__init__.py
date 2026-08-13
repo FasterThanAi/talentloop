@@ -6,6 +6,7 @@ from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, Stri
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
+from app.core.vector import EmbeddingColumn
 
 
 def utcnow() -> datetime:
@@ -164,6 +165,11 @@ class Reply(Base):
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     suggested_action: Mapped[str] = mapped_column(Text, nullable=False)
     response_draft: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Response-draft approval gate (Invariant #2). draft -> approved -> sent
+    response_status: Mapped[str] = mapped_column(String(20), nullable=False, default="none")
+    response_approved_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    response_approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    response_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     outreach_message = relationship("OutreachMessage", back_populates="replies")
@@ -195,7 +201,8 @@ class KnowledgeChunk(Base):
     org_id: Mapped[str] = mapped_column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     source_type: Mapped[str] = mapped_column(String(50), nullable=False)  # role_context | company_policy | salary_bands | benefits
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    embedding: Mapped[list | None] = mapped_column(JSON, nullable=True)  # List of floats or pgvector
+    # Real vector(N) column on PostgreSQL/pgvector; JSON list on SQLite dev. See core/vector.py.
+    embedding: Mapped[list | None] = mapped_column(EmbeddingColumn, nullable=True)
     document_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     chunk_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

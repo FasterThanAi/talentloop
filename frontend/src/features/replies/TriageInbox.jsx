@@ -14,6 +14,31 @@ export const TriageInbox = () => {
     queryFn: () => api.get(`/replies${selectedIntent ? `?intent=${selectedIntent}` : ""}`),
   });
 
+  // Draft -> approve -> send are three separate calls, mirroring the backend gate exactly.
+  const [busyId, setBusyId] = useState(null);
+  const [actionError, setActionError] = useState(null);
+
+  const actionOptions = (path) => ({
+    mutationFn: (replyId) => {
+      setBusyId(replyId);
+      setActionError(null);
+      return api.post(`/replies/${replyId}/${path}`);
+    },
+    onSuccess: () => {
+      setBusyId(null);
+      queryClient.invalidateQueries({ queryKey: ["replies"] });
+    },
+    onError: (err) => {
+      // Surface the backend's problem-detail message verbatim — a 409 here means the
+      // approval gate did its job, and the recruiter should see exactly why.
+      setActionError(err?.message || "Action failed");
+    },
+  });
+
+  const draftMutation = useMutation(actionOptions("draft-response"));
+  const approveMutation = useMutation(actionOptions("approve"));
+  const sendMutation = useMutation(actionOptions("send"));
+
   const syncMutation = useMutation({
     mutationFn: () => api.post("/replies/sync"),
     onSuccess: (res) => {
@@ -129,29 +154,90 @@ export const TriageInbox = () => {
                 </div>
               </div>
 
-              {/* Grounded Response Draft */}
+              {/* Grounded Response Draft — real approve/send gate */}
+              {!draft && (
+                <div className="pt-1 flex justify-end">
+                  <button
+                    onClick={() => draftMutation.mutate(rep.id)}
+                    disabled={busyId === rep.id}
+                    className="px-3.5 py-1.5 text-xs font-semibold text-primary border border-primary/40 hover:bg-primary-weak rounded-control disabled:opacity-50"
+                  >
+                    {busyId === rep.id ? "Drafting…" : "Draft grounded response"}
+                  </button>
+                </div>
+              )}
+
               {draft && (
                 <div className="p-4 rounded-control border border-border bg-surface/60 space-y-2 ai-evidence-border">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-text uppercase tracking-wider">
-                      RAG-Grounded Draft Response (Approve to Send)
+                      Grounded draft response
                     </span>
-                    {draft.knowledge_used && draft.knowledge_used.length > 0 && (
+                    {draft.retrieval_gate_open === false ? (
+                      <span className="text-[11px] text-warning flex items-center gap-1">
+                        <Database className="w-3 h-3" /> Retrieval gate closed — draft defers instead of answering
+                      </span>
+                    ) : (
                       <span className="text-[11px] text-primary flex items-center gap-1">
-                        <Database className="w-3 h-3" /> Grounded in {draft.knowledge_used.length} verified company facts
+                        <Database className="w-3 h-3" /> Grounded in {draft.knowledge_used?.length || 0} verified company facts
                       </span>
                     )}
                   </div>
                   <p className="text-sm text-text font-sans whitespace-pre-wrap">{draft.body}</p>
 
-                  <div className="pt-2 flex justify-end gap-2">
-                    <button
-                      onClick={() => alert("Response approved for dispatch!")}
-                      className="px-3.5 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary/90 rounded-control flex items-center gap-1 shadow-sm"
-                    >
-                      <Send className="w-3 h-3" /> Approve & Send Response
-                    </button>
+                  {draft.deferred_questions?.length > 0 && (
+                    <p className="text-[11px] text-warning">
+                      Deferred to you: {draft.deferred_questions.join("; ")}
+                    </p>
+                  )}
+
+                  <div className="pt-2 flex items-center justify-between">
+                    <StatusPill status={rep.response_status} />
+
+                    <div className="flex gap-2">
+                      {rep.response_status !== "sent" && (
+                        <button
+                          onClick={() => draftMutation.mutate(rep.id)}
+                          disabled={busyId === rep.id}
+                          className="px-3 py-1.5 text-xs font-medium text-text-muted border border-border hover:bg-surface rounded-control disabled:opacity-50"
+                        >
+                          Regenerate
+                        </button>
+                      )}
+
+                      {rep.response_status === "draft" && (
+                        <button
+                          onClick={() => approveMutation.mutate(rep.id)}
+                          disabled={busyId === rep.id}
+                          className="px-3.5 py-1.5 text-xs font-semibold text-white bg-success hover:bg-success/90 rounded-control disabled:opacity-50"
+                        >
+                          Approve
+                        </button>
+                      )}
+
+                      {rep.response_status === "approved" && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm("Send this response to the candidate?")) {
+                              sendMutation.mutate(rep.id);
+                            }
+                          }}
+                          disabled={busyId === rep.id}
+                          className="px-3.5 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary/90 rounded-control flex items-center gap-1 shadow-sm disabled:opacity-50"
+                        >
+                          <Send className="w-3 h-3" /> Send approved response
+                        </button>
+                      )}
+
+                      {rep.response_status === "sent" && (
+                        <span className="text-xs text-success font-medium">Sent</span>
+                      )}
+                    </div>
                   </div>
+
+                  {actionError && busyId === rep.id && (
+                    <p className="text-xs text-danger pt-1">{actionError}</p>
+                  )}
                 </div>
               )}
             </div>

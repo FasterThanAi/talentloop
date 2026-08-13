@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from sqlalchemy import select
 
 from app.ai.runner import run_structured
+from app.core.audit import write_audit
 from app.core.db import SessionLocal
 from app.jobs.runner import register_job_handler, update_job_progress
 from app.models import Candidate, CandidateResearch
@@ -170,6 +171,20 @@ async def enrich_candidate(candidate_id: str, org_id: str) -> CandidateResearch 
             research.evidence_urls = list(fetched_urls_set)
             research.confidence = evidence_result.confidence
             research.could_not_determine = evidence_result.could_not_determine
+
+        write_audit(
+            db=db,
+            org_id=org_id,
+            actor_id="system",
+            action="candidate_enriched",
+            entity="candidate",
+            entity_id=candidate.id,
+            payload={
+                "claims_kept": len(valid_skills) + len(valid_signals) + len(valid_projects),
+                "sources": len(fetched_urls_set),
+                "confidence": evidence_result.confidence,
+            },
+        )
 
         db.commit()
         db.refresh(research)

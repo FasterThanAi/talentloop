@@ -15,6 +15,15 @@ logger = logging.getLogger("talentloop.ai")
 _PROMPT_CACHE: dict[str, str] = {}
 
 
+def ai_is_mocked() -> bool:
+    """
+    True when no real model is reachable and canned responses would be served.
+    Surfaced at startup, on every AI response, and in /health — a demo must never be
+    able to look real while running on mocks.
+    """
+    return not settings.GEMINI_API_KEY or settings.GEMINI_API_KEY == "mock"
+
+
 class AIResult(BaseModel):
     raw_text: str
     parsed: Any | None = None
@@ -24,6 +33,7 @@ class AIResult(BaseModel):
     input_tokens: int
     output_tokens: int
     latency_ms: int
+    mock: bool = False
 
 
 def load_prompt_template(prompt_name: str) -> str:
@@ -118,7 +128,13 @@ class AIClient:
         output_tokens = 0
 
         # If no GEMINI_API_KEY or offline testing mode, provide mock responses based on prompt
-        if not settings.GEMINI_API_KEY or settings.GEMINI_API_KEY == "mock":
+        mocked = ai_is_mocked()
+        if mocked:
+            logger.warning(
+                "AI MOCK MODE: serving a canned response for '%s'. No Gemini call was made. "
+                "Set GEMINI_API_KEY to run against the real model.",
+                prompt_name,
+            )
             raw_output = self._mock_generate(prompt_name, variables)
             output_tokens = len(raw_output.split())
         else:
@@ -160,13 +176,34 @@ class AIClient:
 
         return AIResult(
             raw_text=clean_text,
-            model=settings.GEMINI_MODEL,
+            model="MOCK" if mocked else settings.GEMINI_MODEL,
             prompt_name=prompt_name,
             prompt_version=version,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
-            latency_ms=latency_ms
+            latency_ms=latency_ms,
+            mock=mocked
         )
+
+    async def embed(self, content: str) -> list[float] | None:
+        """
+        Generate an embedding vector for RAG. Returns None when no model is configured,
+        so callers degrade to keyword search rather than storing a fake vector.
+        """
+        if ai_is_mocked():
+            logger.warning("AI MOCK MODE: embedding requested but no model configured; returning None.")
+            return None
+        try:
+            resp = genai.embed_content(
+                model=f"models/{settings.EMBEDDING_MODEL}",
+                content=content,
+                task_type="retrieval_document",
+            )
+            vec = resp["embedding"] if isinstance(resp, dict) else resp.embedding
+            return list(vec)
+        except Exception as e:
+            logger.warning("Embedding call failed: %s", e)
+            return None
 
     def _mock_generate(self, prompt_name: str, variables: dict[str, Any]) -> str:
         """Deterministic mock generator for offline tests and evaluation harness."""

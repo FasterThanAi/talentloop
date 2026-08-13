@@ -7,6 +7,7 @@ from app.api.v1.credentials import router as credentials_router
 from app.api.v1.feedback import router as feedback_router
 from app.api.v1.health import router as health_router
 from app.api.v1.jobs import router as jobs_router
+from app.api.v1.knowledge import router as knowledge_router
 from app.api.v1.outreach import router as outreach_router
 from app.api.v1.pipeline import router as pipeline_router
 from app.api.v1.replies import router as replies_router
@@ -24,6 +25,7 @@ api_v1_router.include_router(outreach_router)
 api_v1_router.include_router(replies_router)
 api_v1_router.include_router(feedback_router)
 api_v1_router.include_router(candidates_router)
+api_v1_router.include_router(knowledge_router)
 api_v1_router.include_router(jobs_router)
 api_v1_router.include_router(credentials_router)
 api_v1_router.include_router(audit_router)

@@ -41,3 +41,43 @@ Visit:
 - Candidate Portal: `http://localhost:5173/portal` (Candidate login: `candidate1@example.com` / `password123`)
 - API Docs: `http://localhost:8000/docs`
 - Health Check: `http://localhost:8000/api/v1/health`
+
+---
+
+## Before Every Demo — run the checks
+
+```bash
+./scripts/verify.sh          # migrations, tests, evals, config sanity — exits non-zero on failure
+python3 scripts/audit_phases.py   # every phase acceptance criterion, statically
+```
+
+`verify.sh` proves the software runs. `audit_phases.py` proves nothing specified went missing.
+CI runs both on every pull request, and the evaluation job is a **gate** — a scoring-prompt or
+rubric change that pushes a matched-pair bias probe beyond tolerance fails the build.
+
+### Two settings that must be right before you demo
+
+`GET /api/v1/health` reports both, and the UI shows a banner when either is wrong:
+
+| Field | Demo value | If wrong |
+|---|---|---|
+| `ai_mode` | your Gemini model | `MOCK` means every AI result on screen is **canned**. Set `GEMINI_API_KEY`. |
+| `db_dialect` / `vector_backend` | `postgresql` / `pgvector` | SQLite is a local-dev fallback: no pgvector search, and append-only audit cannot be enforced. Point `DATABASE_URL` at Supabase. |
+
+The system is deliberately loud about both. A demo that silently runs on mock AI or SQLite would
+misrepresent what was built, so it is designed to be impossible to do by accident.
+
+---
+
+## Where things live
+
+| Path | What |
+|---|---|
+| `backend/app/rubric/` | The scoring rubric and the **pure-Python** weighted aggregation (Invariant 1) |
+| `backend/app/core/guards.py` | Approval and do-not-contact guards (Invariant 2) |
+| `backend/app/ai/prompts/` | Versioned production prompts — change these deliberately, with a version bump |
+| `backend/app/core/vector.py` | Dialect-aware embedding column: real `vector(N)` on Postgres, JSON on SQLite |
+| `backend/tests/eval/` | Bias probes, scoring evaluation, feedback fidelity — the CI gate |
+| `CLAUDE.md` | Global context loaded by the coding agent in every session |
+| `docs/prompts/` | UI system prompt and API contract |
+| `docs/GIT-WORKFLOW.md` | Team branching, review and merge process |

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../lib/api";
+import { EnvironmentBanner } from "./EnvironmentBanner";
 
 export const AppShell = ({ children }) => {
   const location = useLocation();
@@ -124,6 +125,7 @@ export const AppShell = ({ children }) => {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <EnvironmentBanner health={health} />
         <div className="max-w-7xl w-full mx-auto p-6 md:p-8 flex-1">
           {children}
         </div>

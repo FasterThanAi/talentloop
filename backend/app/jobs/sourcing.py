@@ -8,6 +8,7 @@ import docx
 import pypdf
 from sqlalchemy import select
 
+from app.core.audit import write_audit
 from app.core.db import SessionLocal
 from app.jobs.enrichment import handle_enrichment_job
 from app.jobs.runner import enqueue_job, register_job_handler, update_job_progress
@@ -173,6 +174,21 @@ async def handle_sourcing_job(job_id: str, payload: dict[str, Any]) -> None:
                 logger.error(f"Failed to process candidate {email}: {item_err}")
                 update_job_progress(job_id, processed_delta=1, error_entry={"email": email, "error": str(item_err)})
 
+        # One audit row per sourcing run, inside the job's own session.
+        write_audit(
+            db=db,
+            org_id=org_id,
+            actor_id=payload.get("actor_id", "system"),
+            action="candidates_sourced",
+            entity="requisition",
+            entity_id=requisition_id,
+            payload={
+                "source": payload.get("source", "csv"),
+                "submitted": len(raw_candidates),
+                "created": len(newly_created_ids),
+            },
+        )
+        db.commit()
     finally:
         db.close()
 

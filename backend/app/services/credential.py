@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.audit import write_audit
 from app.core.config import settings
 from app.core.deps import problem_detail_error
 from app.models import CredentialRecord, FeedbackReport
@@ -33,7 +34,8 @@ def canonicalize_feedback_payload(report: FeedbackReport) -> bytes:
 
 def issue_feedback_credential(
     db: Session,
-    feedback_report_id: str
+    feedback_report_id: str,
+    actor_id: str = "system"
 ) -> CredentialRecord:
     stmt = select(FeedbackReport).where(FeedbackReport.id == feedback_report_id)
     fb = db.execute(stmt).scalar_one_or_none()
@@ -67,6 +69,18 @@ def issue_feedback_credential(
     else:
         record.payload_hash = payload_hash
         record.tx_hash = simulated_tx
+
+    # Only the hash is ever anchored — no personal data leaves the database.
+    write_audit(
+        db=db,
+        org_id=fb.org_id,
+        actor_id=actor_id,
+        action="credential_issued",
+        entity="feedback_report",
+        entity_id=fb.id,
+        payload={"payload_hash": payload_hash, "network": record.network,
+                 "anchored": settings.CREDENTIAL_ANCHOR_ENABLED},
+    )
 
     db.commit()
     db.refresh(record)

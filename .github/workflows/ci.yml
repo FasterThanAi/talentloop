@@ -1,0 +1,132 @@
+name: CI
+
+# The eval job is a GATE, not a report. A scoring-prompt or rubric change that moves a
+# matched-pair bias probe beyond tolerance fails the build and blocks the merge.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend — lint, unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Migrations apply cleanly on an empty database
+        env:
+          DATABASE_URL: sqlite:///./ci.db
+        run: alembic upgrade head
+
+      - name: Unit tests
+        env:
+          DATABASE_URL: sqlite:///./ci.db
+          GEMINI_API_KEY: mock
+        run: pytest tests/unit -q
+
+  evals:
+    name: Evals — bias probes, scoring, feedback fidelity (BLOCKING)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Bias probes — matched pairs must not differ by more than tolerance
+        env:
+          DATABASE_URL: sqlite:///./ci.db
+          GEMINI_API_KEY: mock
+        run: pytest tests/eval/bias_probes.py -q -s
+
+      - name: Feedback fidelity — no claim absent from the source breakdown
+        env:
+          DATABASE_URL: sqlite:///./ci.db
+          GEMINI_API_KEY: mock
+        run: pytest tests/eval/feedback_fidelity.py -q -s
+
+      - name: Scoring evaluation — rank correlation against the human baseline
+        env:
+          DATABASE_URL: sqlite:///./ci.db
+          GEMINI_API_KEY: mock
+        run: pytest tests/eval/scoring_eval.py -q -s
+
+      - name: Invariant #1 — the scoring prompt must never request an overall score
+        run: |
+          if grep -inE "provide an overall|overall fit score|give a total score|final score" \
+               app/ai/prompts/score.v1.md; then
+            echo "::error::score.v1.md asks the model for an overall score. Invariant #1 broken."
+            exit 1
+          fi
+          echo "OK: scoring prompt requests per-dimension scores only."
+
+      - name: Invariant #2 — no send path may bypass the approval guard
+        run: |
+          fail=0
+          grep -q "require_approved" app/services/outreach.py || { echo "::error::outreach send missing require_approved"; fail=1; }
+          grep -q "assert_contactable" app/services/outreach.py || { echo "::error::outreach send missing assert_contactable"; fail=1; }
+          grep -q "require_response_approved" app/services/conversation.py || { echo "::error::reply send missing require_response_approved"; fail=1; }
+          grep -q "assert_contactable" app/services/feedback.py || { echo "::error::feedback release missing assert_contactable"; fail=1; }
+          if grep -rnE "send_immediately|auto_send|skip_approval" app/ ; then
+            echo "::error::an approval-bypass flag was introduced."
+            fail=1
+          fi
+          exit $fail
+
+  acceptance:
+    name: Acceptance audit — every phase criterion still met
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Phase acceptance audit
+        run: python3 scripts/audit_phases.py
+
+  frontend:
+    name: Frontend — build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build

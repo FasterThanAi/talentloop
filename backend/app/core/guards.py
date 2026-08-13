@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.deps import problem_detail_error
-from app.models import Candidate, OutreachMessage
+from app.models import Candidate, OutreachMessage, Reply
 
 
 def assert_contactable(db: Session, candidate_id: str) -> Candidate:
@@ -58,3 +58,42 @@ def require_approved(db: Session, message_id: str) -> OutreachMessage:
         )
 
     return message
+
+
+def require_response_approved(db: Session, reply_id: str) -> Reply:
+    """
+    Invariant #2 applied to reply responses. A drafted response to a candidate is
+    still a message that reaches a human, so it passes the same gate as outreach:
+    draft -> approve -> send, with send refusing anything not explicitly approved.
+    """
+    stmt = select(Reply).where(Reply.id == reply_id)
+    reply = db.execute(stmt).scalar_one_or_none()
+
+    if not reply:
+        raise problem_detail_error(
+            status_code=status.HTTP_404_NOT_FOUND,
+            title="Reply not found",
+            detail=f"Reply {reply_id} does not exist",
+            code="REPLY_NOT_FOUND"
+        )
+
+    if not reply.response_draft:
+        raise problem_detail_error(
+            status_code=status.HTTP_409_CONFLICT,
+            title="No response draft",
+            detail=f"Reply {reply_id} has no response draft. Generate one before sending.",
+            code="RESPONSE_NOT_DRAFTED"
+        )
+
+    if reply.response_status != "approved":
+        raise problem_detail_error(
+            status_code=status.HTTP_409_CONFLICT,
+            title="Response not approved",
+            detail=(
+                f"Response for reply {reply_id} is in state '{reply.response_status}'. "
+                "Approve it before sending."
+            ),
+            code="RESPONSE_NOT_APPROVED"
+        )
+
+    return reply

@@ -53,7 +53,7 @@ def issue_credential(
     current_user: User = Depends(require_scope("recruiter")),
     db: Session = Depends(get_db)
 ):
-    record = issue_feedback_credential(db=db, feedback_report_id=id)
+    record = issue_feedback_credential(db=db, feedback_report_id=id, actor_id=current_user.id)
     return {
         "payload_hash": record.payload_hash,
         "tx_hash": record.tx_hash,

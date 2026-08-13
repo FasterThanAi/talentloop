@@ -5,10 +5,12 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.ai.client import ai_is_mocked
 from app.api.v1.api_router import api_v1_router
 from app.core.config import settings
 from app.core.db import check_db_connection, check_pgvector_extension
 from app.core.idempotency import IdempotencyMiddleware
+from app.core.vector import vector_backend
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("talentloop.main")
@@ -27,7 +29,23 @@ async def lifespan(app: FastAPI):
     logger.info(f"2. pgvector Extension:      [{'OK' if pgvector_ok else 'WARN: Missing'}]")
     logger.info(f"3. Gemini API Key:          [{'OK' if gemini_ok else 'INFO: Mock mode / key unset'}]")
     logger.info(f"4. Gmail OAuth Credentials: [{'OK' if gmail_ok else 'INFO: Mock mode / credentials unset'}]")
+    logger.info(f"5. DB dialect:              [{'postgresql' if settings.DATABASE_URL.startswith(('postgresql', 'postgres://')) else 'sqlite (dev fallback)'}]")
+    logger.info(f"6. Vector backend:          [{vector_backend()}]")
     logger.info("=========================================")
+
+    if ai_is_mocked():
+        logger.warning("")
+        logger.warning("  *********************************************************")
+        logger.warning("  *  AI MOCK MODE ACTIVE - NO REAL MODEL CALLS ARE MADE   *")
+        logger.warning("  *  Every AI result is canned. DO NOT DEMO IN THIS MODE. *")
+        logger.warning("  *  Set GEMINI_API_KEY in backend/.env to fix.           *")
+        logger.warning("  *********************************************************")
+        logger.warning("")
+    if settings.DATABASE_URL.startswith("sqlite"):
+        logger.warning(
+            "SQLite is a local-dev fallback. Set DATABASE_URL to the Supabase Postgres URI "
+            "before demoing: pgvector search and append-only audit enforcement require Postgres."
+        )
 
     yield
     logger.info("TalentLoop backend shutting down.")
