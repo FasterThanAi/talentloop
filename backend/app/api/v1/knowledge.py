@@ -49,6 +49,7 @@ async def create_knowledge(
     )
     chunk.embedding = await embed_text(body.content)
     db.add(chunk)
+    db.flush()   # populate chunk.id before auditing — the UUID default lands at INSERT
 
     write_audit(
         db=db,

@@ -83,6 +83,7 @@ async def process_incoming_reply(
         received_at=utcnow()
     )
     db.add(reply)
+    db.flush()   # populate reply.id before auditing (UUID default applies at INSERT)
 
     # Update pipeline entry stage if appropriate
     stmt_pe = select(PipelineEntry).where(PipelineEntry.id == msg.pipeline_entry_id)

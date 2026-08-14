@@ -81,6 +81,11 @@ async def draft_outreach_message(
             status="draft"
         )
         db.add(msg)
+        # The id column's default (generate_uuid) is applied by SQLAlchemy at INSERT time,
+        # not when the Python object is constructed. Without this flush msg.id is still
+        # None a few lines below, and write_audit() then violates the NOT NULL constraint
+        # on audit_events.entity_id — taking the whole draft down with it.
+        db.flush()
     else:
         msg.subject = draft_result.subject
         msg.body = draft_result.body
