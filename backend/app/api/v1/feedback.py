@@ -1,12 +1,12 @@
 from typing import List
 
-from app.schemas.credential import CredentialVerifyResponse
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db, require_scope
 from app.models import Candidate, CredentialRecord, FeedbackReport, PipelineEntry, Requisition, User
+from app.schemas.credential import CredentialVerifyResponse
 from app.schemas.feedback import FeedbackOut
 from app.services.credential import issue_feedback_credential
 

@@ -1,8 +1,8 @@
-from app.schemas.credential import CredentialVerifyResponse
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
+from app.schemas.credential import CredentialVerifyResponse
 from app.services.credential import verify_credential
 
 router = APIRouter(prefix="/credentials", tags=["Credentials"])

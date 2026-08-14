@@ -290,11 +290,19 @@ def send_reply_response(db: Session, reply_id: str, user: User) -> Reply:
     reply = require_response_approved(db, reply_id)
     candidate = assert_contactable(db, _candidate_for_reply(db, reply).id)
 
+    # Thread the response onto the original subject so it lands in the same conversation
+    # in the candidate's inbox rather than arriving as an orphan message.
+    original = db.execute(
+        select(OutreachMessage).where(OutreachMessage.id == reply.outreach_message_id)
+    ).scalar_one_or_none()
+    original_subject = (original.subject if original else "") or "your application"
+    subject = original_subject if original_subject.lower().startswith("re:") else f"Re: {original_subject}"
+
     body = (reply.response_draft or {}).get("body", "")
     send_result = send_gmail_message(
         user=user,
         to_email=candidate.email,
-        subject=f"Re: your reply",
+        subject=subject,
         body=body,
     )
 
