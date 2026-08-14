@@ -13,6 +13,8 @@ import pytest
 
 from app.core.audit import write_audit
 
+APP_DIR = pathlib.Path(__file__).resolve().parents[2] / "app"
+
 
 def test_write_audit_rejects_empty_entity_id():
     with pytest.raises(ValueError) as exc:
@@ -30,7 +32,7 @@ def test_write_audit_rejects_empty_entity_id():
 def test_no_caller_audits_an_unflushed_row():
     """Static sweep: every db.add(x) whose .id is later audited must have a flush between."""
     offenders = []
-    for path in pathlib.Path("app").rglob("*.py"):
+    for path in pathlib.Path(APP_DIR).rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"), str(path))
         for fn in ast.walk(tree):
             if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
