@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app.ai.client import ai_is_mocked
+from app.ai.client import active_providers, ai_is_mocked
 from app.core.config import settings
 from app.core.db import check_db_connection, check_pgvector_extension
 from app.core.vector import vector_backend
@@ -18,6 +18,7 @@ class HealthResponse(BaseModel):
     db_dialect: str
     vector_backend: str
     ai_mode: str
+    ai_providers: list[str]
 
 
 @router.get("/health", response_model=HealthResponse, tags=["Health"])
@@ -38,5 +39,11 @@ async def get_health() -> HealthResponse:
         version="0.1.0",
         db_dialect=dialect,
         vector_backend=vector_backend(),
-        ai_mode="MOCK" if mocked else settings.GEMINI_MODEL,
+        # Name the model of whichever provider is FIRST in the live chain, so this field
+        # never claims Gemini while Groq is actually serving every request.
+        ai_mode=(
+            "MOCK" if mocked
+            else (settings.GEMINI_MODEL if active_providers()[0] == "gemini" else settings.GROQ_MODEL)
+        ),
+        ai_providers=active_providers(),
     )

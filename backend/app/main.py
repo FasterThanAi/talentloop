@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.ai.client import ai_is_mocked
+from app.ai.client import active_providers, ai_is_mocked
 from app.api.v1.api_router import api_v1_router
 from app.core.config import settings
 from app.core.db import check_db_connection, check_pgvector_extension
@@ -35,7 +35,8 @@ async def lifespan(app: FastAPI):
     logger.info("=== TalentLoop System Startup Checks ===")
     logger.info(f"1. Database Reachable:      [{'OK' if db_ok else 'WARN: Unreachable'}]")
     logger.info(f"2. pgvector Extension:      [{'OK' if pgvector_ok else 'WARN: Missing'}]")
-    logger.info(f"3. Gemini API Key:          [{'OK' if gemini_ok else 'INFO: Mock mode / key unset'}]")
+    logger.info(f"3. Gemini API Key:          [{'OK' if gemini_ok else 'INFO: unset'}]")
+    logger.info(f"3b. AI provider chain:      [{' -> '.join(active_providers()) or 'NONE (mock mode)'}]")
     logger.info(f"4. Gmail OAuth Credentials: [{'OK' if gmail_ok else 'INFO: Mock mode / credentials unset'}]")
     logger.info(f"5. DB dialect:              [{'postgresql' if settings.DATABASE_URL.startswith(('postgresql', 'postgres://')) else 'sqlite (dev fallback)'}]")
     logger.info(f"6. Vector backend:          [{vector_backend()}]")
@@ -56,7 +57,7 @@ async def lifespan(app: FastAPI):
         logger.warning("  *********************************************************")
         logger.warning("  *  AI MOCK MODE ACTIVE - NO REAL MODEL CALLS ARE MADE   *")
         logger.warning("  *  Every AI result is canned. DO NOT DEMO IN THIS MODE. *")
-        logger.warning("  *  Set GEMINI_API_KEY in backend/.env to fix.           *")
+        logger.warning("  *  Set GEMINI_API_KEY or GROQ_API_KEY to fix.           *")
         logger.warning("  *********************************************************")
         logger.warning("")
     if settings.DATABASE_URL.startswith("sqlite"):

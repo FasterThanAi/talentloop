@@ -91,6 +91,14 @@ jobs:
           fi
           echo "OK: scoring prompt requests per-dimension scores only."
 
+      - name: AI provider fallback must remain wired
+        run: |
+          fail=0
+          grep -q "def active_providers" app/ai/client.py || { echo "::error::active_providers() missing"; fail=1; }
+          grep -q "_generate_groq" app/ai/client.py || { echo "::error::Groq provider missing"; fail=1; }
+          grep -q "is_quota_error" app/ai/client.py || { echo "::error::quota detection missing"; fail=1; }
+          exit $fail
+
       - name: Invariant #2 — no send path may bypass the approval guard
         run: |
           fail=0

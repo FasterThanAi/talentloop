@@ -22,6 +22,21 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-3.5-flash"
     EMBEDDING_MODEL: str = "text-embedding-004"
     EMBEDDING_DIMENSION: int = 768
+
+    # Groq — fallback generation provider. OpenAI-compatible API, so no extra SDK.
+    # Exists because the Gemini free tier caps daily generate_content requests very low
+    # (20/day on gemini-3.5-flash), which is enough to kill a live demo. When Gemini
+    # returns a quota/rate-limit error the client fails over to Groq automatically.
+    GROQ_API_KEY: str | None = None
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+
+    # Order providers are tried in. Comma-separated; unconfigured ones are skipped.
+    AI_PROVIDER_ORDER: str = "gemini,groq"
+
+    @property
+    def ai_provider_order(self) -> list[str]:
+        return [p.strip().lower() for p in self.AI_PROVIDER_ORDER.split(",") if p.strip()]
     
     # Gmail OAuth
     GMAIL_CLIENT_ID: str | None = None

@@ -1,3 +1,7 @@
+import hashlib
+import re
+import urllib.parse
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
@@ -7,6 +11,30 @@ from app.jobs.sourcing import get_rizeos_pool_candidates, parse_csv_candidates, 
 from app.models import User
 from app.schemas.candidate import SourcingURLsRequest
 from app.schemas.common import JobResponse
+
+
+def placeholder_email_for_url(url: str) -> str:
+    """
+    Stable, URL-derived placeholder address for a sourced profile.
+
+    This used to be positional — candidate_1@profile.dev, candidate_2@… — which meant the
+    FIRST url of every ingestion produced the SAME address as the first url of every
+    previous ingestion. Sourcing dedupes on (org_id, email), so every profile after the
+    very first was silently skipped as "already present in requisition pipeline" and never
+    appeared in the pipeline.
+
+    Deriving the address from the URL keeps re-ingesting the same profile correctly
+    idempotent, while letting genuinely different profiles through. The short hash
+    guarantees uniqueness when two different URLs share a slug (e.g. two sites with the
+    same username).
+    """
+    parsed = urllib.parse.urlparse(url)
+    host = (parsed.netloc or "unknown").split(":")[0].removeprefix("www.")
+    site = re.sub(r"[^a-z0-9]", "", host.split(".")[0].lower()) or "web"
+    slug = re.sub(r"[^a-z0-9._-]", "", parsed.path.strip("/").replace("/", "-").lower())[:40] or "profile"
+    digest = hashlib.sha1(url.strip().rstrip("/").lower().encode()).hexdigest()[:8]
+    return f"{slug}.{site}.{digest}@sourced.talentloop.local"
+
 
 router = APIRouter(prefix="/requisitions/{requisition_id}/source", tags=["Sourcing"])
 
@@ -57,14 +85,14 @@ async def source_from_urls(
     db: Session = Depends(get_db)
 ):
     candidates = []
-    for idx, url in enumerate(req_body.urls):
+    for url in req_body.urls:
         url_clean = url.strip()
         if not url_clean:
             continue
         name_guess = url_clean.rstrip("/").split("/")[-1].replace("-", " ").title()
         candidates.append({
             "full_name": name_guess,
-            "email": f"candidate_{idx+1}@profile.dev",
+            "email": placeholder_email_for_url(url_clean),
             "phone": None,
             "public_urls": [url_clean],
             "source": "urls"

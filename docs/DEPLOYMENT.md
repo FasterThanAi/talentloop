@@ -91,6 +91,9 @@ JWT_SECRET=<a long random string — NOT the dev default>
 GMAIL_CLIENT_ID=<from Google Cloud Console>
 GMAIL_CLIENT_SECRET=<from Google Cloud Console>
 GEMINI_MODEL=gemini-3.5-flash
+GROQ_API_KEY=<your Groq key — enables automatic fallback>
+GROQ_MODEL=llama-3.3-70b-versatile
+AI_PROVIDER_ORDER=gemini,groq
 EMBEDDING_MODEL=text-embedding-004
 EMBEDDING_DIMENSION=768
 HUNTER_ENABLED=false
@@ -127,7 +130,13 @@ without noticing:
 | `db` | `false` | `DATABASE_URL` wrong, or password not URL-encoded |
 | `pgvector` | `false` | you skipped enabling the extension in Supabase |
 | `db_dialect` | `sqlite` | `DATABASE_URL` not set — it fell back to the dev default |
-| `ai_mode` | `MOCK` | `GEMINI_API_KEY` not set; **every AI result would be fake** |
+| `ai_mode` | `MOCK` | no provider key set; **every AI result would be fake** |
+| `ai_providers` | `[]` or missing `groq` | fallback not wired — Gemini quota will break the demo |
+
+**On the Gemini free tier**, `gemini-3.5-flash` allows only ~20 generate requests per day.
+Set `GROQ_API_KEY` so the client fails over automatically when that runs out — the log line
+`AI FALLBACK: 'groq' served ...` tells you when it happens. Groq has no embeddings endpoint,
+so semantic search still needs Gemini; without it, retrieval degrades to keyword matching.
 
 **Note your backend URL.** Everything below needs it.
 

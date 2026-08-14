@@ -59,6 +59,13 @@ services:
 
       - key: GEMINI_MODEL
         value: gemini-3.5-flash
+      # Groq fallback — set the key in the dashboard to enable it.
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: AI_PROVIDER_ORDER
+        value: gemini,groq
       - key: EMBEDDING_MODEL
         value: text-embedding-004
       - key: EMBEDDING_DIMENSION
