@@ -41,8 +41,17 @@ def _fixture_reply(db, *, response_status="draft", has_draft=True, do_not_contac
         org_id=org.id, full_name="Test Person", email="c@example.dev",
         source="csv", do_not_contact=do_not_contact,
     )
-    req = Requisition(org_id=org.id, title="Backend Engineer", jd_raw="...", status="open")
-    db.add_all([user, cand, req])
+    db.add_all([user, cand])
+    db.flush()   # need user.id before the requisition, which requires created_by
+
+    req = Requisition(
+        org_id=org.id,
+        created_by=user.id,
+        title="Backend Engineer",
+        jd_raw="...",
+        status="open",
+    )
+    db.add(req)
     db.flush()
 
     pe = PipelineEntry(org_id=org.id, requisition_id=req.id, candidate_id=cand.id, stage="contacted")

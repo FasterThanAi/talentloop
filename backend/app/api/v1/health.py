@@ -27,14 +27,12 @@ async def get_health() -> HealthResponse:
     mocked = ai_is_mocked()
     dialect = "postgresql" if settings.DATABASE_URL.startswith(("postgresql", "postgres://")) else "sqlite"
 
-    status = "ok"
-    if not db_ok:
-        status = "degraded"
-    elif mocked:
-        status = "mock-ai"
-
+    # `status` describes SERVICE health only, and stays within its documented contract of
+    # ok | degraded. Mock-AI is not a service fault — it is a configuration state — so it is
+    # reported through `ai_mode`, which is what the UI banner and the deploy checks read.
+    # Overloading `status` here previously broke the smoke test's contract for no gain.
     return HealthResponse(
-        status=status,
+        status="ok" if db_ok else "degraded",
         db=db_ok,
         pgvector=pgvector_ok,
         version="0.1.0",
