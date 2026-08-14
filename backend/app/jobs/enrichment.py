@@ -1,3 +1,4 @@
+import asyncio
 import ipaddress
 import logging
 import socket
@@ -63,8 +64,14 @@ def check_robots_allowed(url: str) -> bool:
         robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
         rp = urllib.robotparser.RobotFileParser()
         rp.set_url(robots_url)
-        # Quick 2s check
-        rp.read()
+        # RobotFileParser has no timeout parameter and will otherwise inherit "wait
+        # forever". A stuck robots.txt fetch used to hang the whole request.
+        old_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(ROBOTS_TIMEOUT_SECONDS)
+        try:
+            rp.read()
+        finally:
+            socket.setdefaulttimeout(old_timeout)
         return rp.can_fetch("TalentLoopBot/1.0", url)
     except Exception:
         # Default to allowed if robots.txt unreachable
@@ -72,12 +79,16 @@ def check_robots_allowed(url: str) -> bool:
 
 
 async def fetch_page_clean_text(url: str) -> dict[str, str] | None:
-    safe, reason = is_safe_url(url)
+    # is_safe_url does blocking DNS (socket.getaddrinfo) and check_robots_allowed does a
+    # blocking HTTP fetch. Both are called from a coroutine, so running them inline would
+    # stall the event loop — and with one worker on Render, that stalls the entire API.
+    # Off to a thread they go.
+    safe, reason = await asyncio.to_thread(is_safe_url, url)
     if not safe:
         logger.warning(f"SSRF guard blocked fetch for {url}: {reason}")
         return None
 
-    if not check_robots_allowed(url):
+    if not await asyncio.to_thread(check_robots_allowed, url):
         logger.info(f"robots.txt disallowed fetch for {url}, skipping.")
         return None
 

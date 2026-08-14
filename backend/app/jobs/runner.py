@@ -13,9 +13,24 @@ logger = logging.getLogger("talentloop.jobs")
 
 _JOB_HANDLERS: dict[str, Callable[..., Coroutine[Any, Any, None]]] = {}
 
+# Every job name the API is allowed to enqueue. Declared here so a typo or a handler
+# module that was never imported fails LOUDLY at startup instead of at 500 on the one
+# button a judge presses. A registration only runs when its module is imported, which
+# makes "handler missing" a silent, easy mistake — this closes that gap.
+EXPECTED_JOB_HANDLERS = {"source_candidates", "enrich_candidates", "score_candidates"}
+
 
 def register_job_handler(name: str, handler: Callable[..., Coroutine[Any, Any, None]]) -> None:
     _JOB_HANDLERS[name] = handler
+
+
+def registered_job_handlers() -> list[str]:
+    return sorted(_JOB_HANDLERS)
+
+
+def verify_job_handlers() -> list[str]:
+    """Returns the names that are expected but not registered. Empty list means healthy."""
+    return sorted(EXPECTED_JOB_HANDLERS - set(_JOB_HANDLERS))
 
 
 def create_job(db: Session, org_id: str, name: str, total: int = 0) -> Job:
@@ -82,7 +97,13 @@ def set_job_status(job_id: str, status: str, result_ref: str | None = None) -> N
 async def enqueue_job(name: str, payload: dict[str, Any]) -> str:
     handler = _JOB_HANDLERS.get(name)
     if not handler:
-        raise ValueError(f"No job handler registered for '{name}'")
+        # Was a 500 with a bare ValueError, which surfaced in the UI as a button that
+        # spun forever with no explanation. Now it says what is wrong and what exists.
+        raise ValueError(
+            f"No job handler registered for '{name}'. "
+            f"Registered handlers: {registered_job_handlers()}. "
+            "Either the name is misspelled or the module that registers it was never imported."
+        )
 
     db = SessionLocal()
     try:

@@ -142,7 +142,7 @@ async def score_all_candidates(
             }
         )
 
-    job_id = await enqueue_job("score_requisition_candidates", {
+    job_id = await enqueue_job("score_candidates", {
         "org_id": current_user.org_id,
         "requisition_id": id,
         "pipeline_entry_ids": entry_ids,

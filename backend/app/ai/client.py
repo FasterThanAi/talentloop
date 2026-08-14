@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -13,6 +14,10 @@ from app.core.config import settings
 logger = logging.getLogger("talentloop.ai")
 
 _PROMPT_CACHE: dict[str, str] = {}
+
+# Hard ceiling on a single generation. Without this, one hung upstream call
+# holds a worker thread and the user sees an spinner that never resolves.
+GENERATE_TIMEOUT_SECONDS = 45.0
 
 
 def ai_is_mocked() -> bool:
@@ -152,16 +157,33 @@ class AIClient:
 
             for attempt in range(max_retries):
                 try:
-                    response = model.generate_content(prompt_text)
+                    # The google-generativeai SDK is SYNCHRONOUS. Calling it directly from a
+                    # coroutine blocks the whole event loop, which on a single-worker
+                    # deployment freezes every other request for the duration of the call —
+                    # including the response to the request that started the job. Push it to
+                    # a worker thread and cap it, so one slow generation cannot stall the API.
+                    response = await asyncio.wait_for(
+                        asyncio.to_thread(model.generate_content, prompt_text),
+                        timeout=GENERATE_TIMEOUT_SECONDS,
+                    )
                     raw_output = response.text or ""
                     if hasattr(response, "usage_metadata") and response.usage_metadata:
                         input_tokens = getattr(response.usage_metadata, "prompt_token_count", input_tokens)
                         output_tokens = getattr(response.usage_metadata, "candidates_token_count", len(raw_output.split()))
                     break
+                except TimeoutError as e:
+                    last_error = e
+                    logger.warning(
+                        f"Gemini call for '{prompt_name}' exceeded {GENERATE_TIMEOUT_SECONDS}s "
+                        f"(attempt {attempt+1}/{max_retries})."
+                    )
+                    await asyncio.sleep(backoff)
+                    backoff *= 2
                 except Exception as e:
                     last_error = e
                     logger.warning(f"Gemini API attempt {attempt+1} failed: {e}. Retrying in {backoff}s...")
-                    time.sleep(backoff)
+                    # asyncio.sleep, never time.sleep: time.sleep blocks the event loop.
+                    await asyncio.sleep(backoff)
                     backoff *= 2
             else:
                 raise RuntimeError(f"Gemini API failed after {max_retries} attempts: {last_error}")

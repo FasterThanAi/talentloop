@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import api from "../../lib/api";
@@ -8,17 +8,23 @@ export const JobProgress = ({ jobId, onCompleted, label = "Processing background
     queryKey: ["job", jobId],
     queryFn: () => api.get(`/jobs/${jobId}`),
     enabled: Boolean(jobId),
+    // MUST stay pure. This runs on every render, so calling onCompleted() from here
+    // triggered: callback -> parent re-render -> this re-evaluated -> callback again,
+    // an infinite loop that froze the browser tab ("Page Unresponsive").
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      if (status === "completed" || status === "failed") {
-        if (status === "completed" && onCompleted) {
-          onCompleted();
-        }
-        return false;
-      }
-      return 1500; // poll every 1.5s
+      return status === "completed" || status === "failed" ? false : 1500;
     },
   });
+
+  // Side effects belong in an effect, and this one must fire exactly once per job.
+  const notifiedForJob = useRef(null);
+  useEffect(() => {
+    if (job?.status === "completed" && notifiedForJob.current !== jobId) {
+      notifiedForJob.current = jobId;
+      onCompleted?.();
+    }
+  }, [job?.status, jobId, onCompleted]);
 
   if (!job) return null;
 

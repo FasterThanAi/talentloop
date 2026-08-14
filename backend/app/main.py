@@ -12,6 +12,14 @@ from app.core.db import check_db_connection, check_pgvector_extension
 from app.core.idempotency import IdempotencyMiddleware
 from app.core.vector import vector_backend
 
+# Importing these modules is what REGISTERS their job handlers. Without an explicit import
+# here, registration depends on some router happening to import them, which is how
+# "score_candidates" ended up unregistered in production. Import them deliberately.
+import app.jobs.enrichment  # noqa: F401  (registers enrich_candidates)
+import app.jobs.scoring  # noqa: F401  (registers score_candidates)
+import app.jobs.sourcing  # noqa: F401  (registers source_candidates)
+from app.jobs.runner import registered_job_handlers, verify_job_handlers
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("talentloop.main")
 
@@ -31,7 +39,17 @@ async def lifespan(app: FastAPI):
     logger.info(f"4. Gmail OAuth Credentials: [{'OK' if gmail_ok else 'INFO: Mock mode / credentials unset'}]")
     logger.info(f"5. DB dialect:              [{'postgresql' if settings.DATABASE_URL.startswith(('postgresql', 'postgres://')) else 'sqlite (dev fallback)'}]")
     logger.info(f"6. Vector backend:          [{vector_backend()}]")
+    missing_handlers = verify_job_handlers()
+    logger.info(f"7. Job handlers:            [{'OK: ' + ', '.join(registered_job_handlers()) if not missing_handlers else 'MISSING: ' + ', '.join(missing_handlers)}]")
     logger.info("=========================================")
+
+    if missing_handlers:
+        # Loud, because the symptom otherwise is a button that 500s only when pressed.
+        logger.error(
+            "JOB HANDLERS MISSING: %s — any endpoint enqueueing these will fail at runtime. "
+            "Check that the module registering each one is imported in app/main.py.",
+            ", ".join(missing_handlers),
+        )
 
     if ai_is_mocked():
         logger.warning("")
