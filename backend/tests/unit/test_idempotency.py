@@ -1,10 +1,12 @@
 import uuid
+
 import pytest
 from fastapi.testclient import TestClient
+
 from app.core.db import Base, SessionLocal, engine
+from app.core.security import create_access_token, hash_password
 from app.main import app
 from app.models import Organization, User
-from app.core.security import create_access_token, hash_password
 
 client = TestClient(app)
 
