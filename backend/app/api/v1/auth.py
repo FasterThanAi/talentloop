@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.deps import get_current_user, get_db, problem_detail_error
-from app.models import User
 from app.core.security import create_access_token, create_refresh_token, decode_token
+from app.models import User
 from app.schemas.auth import Token, UserLogin, UserOut, UserRegister
 from app.services.auth import authenticate_user, register_user
 from app.services.gmail import exchange_code_for_tokens, generate_auth_url

@@ -9,6 +9,7 @@ name resolves, so a typo fails in CI instead of in front of a user.
 """
 import ast
 import os
+import pathlib
 
 import app.main  # noqa: F401  — importing the app is what registers the handlers
 from app.jobs.runner import registered_job_handlers, verify_job_handlers
@@ -67,9 +68,6 @@ def test_scoring_handler_reads_the_key_the_endpoint_sends():
     "pipeline_ids". The mismatch made every scoring run a silent no-op that still reported
     success. Assert the two sides agree, statically, so a rename cannot resurrect it.
     """
-    import ast
-    import pathlib
-
     app_dir = pathlib.Path(APP_DIR)
     endpoint_keys = set()
     tree = ast.parse((app_dir / "api" / "v1" / "requisitions.py").read_text(encoding="utf-8"))

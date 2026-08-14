@@ -5,19 +5,18 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.ai.client import active_providers, ai_is_mocked
-from app.api.v1.api_router import api_v1_router
-from app.core.config import settings
-from app.core.db import check_db_connection, check_pgvector_extension
-from app.core.idempotency import IdempotencyMiddleware
-from app.core.vector import vector_backend
-
 # Importing these modules is what REGISTERS their job handlers. Without an explicit import
 # here, registration depends on some router happening to import them, which is how
 # "score_candidates" ended up unregistered in production. Import them deliberately.
 import app.jobs.enrichment  # noqa: F401  (registers enrich_candidates)
 import app.jobs.scoring  # noqa: F401  (registers score_candidates)
 import app.jobs.sourcing  # noqa: F401  (registers source_candidates)
+from app.ai.client import active_providers, ai_is_mocked
+from app.api.v1.api_router import api_v1_router
+from app.core.config import settings
+from app.core.db import check_db_connection, check_pgvector_extension
+from app.core.idempotency import IdempotencyMiddleware
+from app.core.vector import vector_backend
 from app.jobs.runner import registered_job_handlers, verify_job_handlers
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")

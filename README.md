@@ -1,6 +1,6 @@
 # TalentLoop — Agentic Hiring Assistant
 
-**RizeOS Hackathon 2026 · Round 2 Submission · AI Track + Full-Stack Track**
+**Team 000 · RizeOS Hackathon 2026 · Round 2 Submission · AI Track + Full-Stack Track**
 
 TalentLoop reads a job description, sources and researches candidates, scores them against a
 transparent rubric with citations, drafts personalised outreach, triages replies, and returns a
@@ -405,12 +405,14 @@ Stated plainly, because a demo that hides its edges is not useful.
 
 ## 14. Team
 
-| Name | Focus |
-|---|---|
-| **Pranav Undirkalle** | Backend, data model, migrations |
-| **Vineet Polampalli** | AI pipeline, prompt library, evals |
-| **Raj Gautam** | Frontend, design system, candidate portal |
-| **Priyanshu Kumar** | Architecture, deployment, CI, integration |
+**Team 000**
+
+| Name | GitHub | Focus |
+|---|---|---|
+| Pranav Somnath Undirkalle | [@pranavuk](https://github.com/pranavuk) | Backend, data model, migrations |
+| Vineet Ramayya Polampalli | [@vineeth34064](https://github.com/vineeth34064) | AI pipeline, prompt library, evals |
+| Raj Gautam | [@RajGautam2004](https://github.com/RajGautam2004) | Frontend, design system, candidate portal |
+| Priyanshu Kumar | [@FasterThanAi](https://github.com/FasterThanAi) | Architecture, deployment, CI, integration |
 
 Built for the **RizeOS Hackathon 2026** — AI Track and Full-Stack Track.
 
