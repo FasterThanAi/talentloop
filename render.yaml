@@ -1,0 +1,71 @@
+# Render Blueprint — backend API only. The frontend lives on Vercel.
+#
+# You can either use this file (Render → New → Blueprint → point at this repo) or create
+# the service manually with the same settings. The blueprint is checked in so the
+# configuration is reviewable and reproducible rather than living only in a dashboard.
+
+services:
+  - type: web
+    name: talentloop-api
+    runtime: python
+    plan: free
+    region: singapore          # closest free region to India; change if you prefer
+    rootDir: backend
+    branch: main
+
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+
+    # Migrations run on start, not on build. Two reasons: the free plan runs a single
+    # instance so there is no race, and a build that ran alembic would fail on the very
+    # first deploy — before you have had a chance to set DATABASE_URL in the dashboard.
+    # If a migration fails the service refuses to start, which is what you want: better a
+    # dead deploy than an API serving against a schema it does not match.
+    #
+    # Render injects $PORT. Hard-coding a port is the most common reason a deploy reports
+    # success and then times out with "no open ports detected".
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+    healthCheckPath: /api/v1/health
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.4"
+      - key: APP_ENV
+        value: production        # switches cookies to SameSite=none; Secure
+
+      # ---- set these in the Render dashboard, never in this file ----
+      - key: DATABASE_URL        # Supabase URI. Use the SESSION POOLER (port 5432) —
+        sync: false              # see DEPLOYMENT.md for why the direct URL fails on Render
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GMAIL_CLIENT_ID
+        sync: false
+      - key: GMAIL_CLIENT_SECRET
+        sync: false
+
+      # ---- set after the first deploy, once you know your URLs ----
+      - key: GMAIL_REDIRECT_URI
+        sync: false              # https://<api>.onrender.com/api/v1/auth/gmail/callback
+      - key: GOOGLE_REDIRECT_URI
+        sync: false              # https://<api>.onrender.com/api/v1/auth/google/callback
+      - key: FRONTEND_URL
+        sync: false              # https://<app>.vercel.app
+      - key: CORS_ORIGINS
+        sync: false              # https://<app>.vercel.app  (comma-separated, no trailing slash)
+
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: EMBEDDING_MODEL
+        value: text-embedding-004
+      - key: EMBEDDING_DIMENSION
+        value: "768"
+      - key: HUNTER_ENABLED
+        value: "false"
+      - key: RIZEOS_ENABLED
+        value: "false"
+      - key: CREDENTIAL_ANCHOR_ENABLED
+        value: "false"

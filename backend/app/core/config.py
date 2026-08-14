@@ -46,12 +46,38 @@ class Settings(BaseSettings):
     
     # RAG / Sourcing defaults
     RESPONSE_MIN_RELEVANCE: float = 0.65
-    CORS_ORIGINS: list[str] = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000"
-    ]
+
+    # Comma-separated in the environment, e.g.
+    #   CORS_ORIGINS=https://talentloop.vercel.app,http://localhost:5173
+    # In production this MUST include the exact Vercel origin, scheme included and no
+    # trailing slash, or every browser request fails before it reaches a route.
+    CORS_ORIGINS: str = (
+        "http://localhost:5173,http://127.0.0.1:5173,"
+        "http://localhost:3000,http://127.0.0.1:3000"
+    )
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip().rstrip("/") for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    @property
+    def is_production(self) -> bool:
+        return self.APP_ENV.lower() in ("production", "prod")
+
+    @property
+    def cookie_samesite(self) -> str:
+        """
+        Deployed, the SPA (Vercel) and the API (Render) are different sites, so a
+        SameSite=lax cookie is simply never sent and every session silently dies on
+        refresh. Cross-site requires SameSite=none, which browsers only accept together
+        with Secure — hence the pairing below. Locally both run on the same host, so lax
+        works and avoids requiring HTTPS in development.
+        """
+        return "none" if self.is_production else "lax"
+
+    @property
+    def cookie_secure(self) -> bool:
+        return self.is_production
 
 
 settings = Settings()

@@ -24,7 +24,8 @@ def register(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        samesite="strict",
+        samesite=settings.cookie_samesite,
+        secure=settings.cookie_secure,
         max_age=7 * 24 * 3600
     )
     return Token(
@@ -45,7 +46,8 @@ def login(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        samesite="strict",
+        samesite=settings.cookie_samesite,
+        secure=settings.cookie_secure,
         max_age=7 * 24 * 3600
     )
     return Token(
@@ -111,7 +113,9 @@ def google_callback(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        samesite="lax",  # lax, not strict: this is a cross-site redirect back from Google
+        # Cross-site in production (Vercel SPA <- Render API), so samesite=none + secure.
+        samesite=settings.cookie_samesite,
+        secure=settings.cookie_secure,
         max_age=7 * 24 * 3600,
     )
     return redirect
