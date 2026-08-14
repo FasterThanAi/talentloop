@@ -89,6 +89,14 @@ export const EvidenceDrawer = ({ isOpen, onClose, explainData }) => {
                 Rubric Dimension Breakdown (5 Dimensions)
               </h3>
               <div className="space-y-4">
+                {dimensions.length === 0 && (
+                  <div className="p-4 rounded-card border border-dashed border-border bg-surface/40 text-xs text-text-muted leading-relaxed">
+                    <span className="font-semibold text-text block mb-1">Not scored yet</span>
+                    This candidate has evidence collected but no rubric evaluation. Open the
+                    requisition, make sure the job description is parsed, then run
+                    <span className="font-medium text-text"> Score All Candidates</span>.
+                  </div>
+                )}
                 {dimensions.map((dim, idx) => {
                   const dimTitles = {
                     must_have_coverage: "Must-Have Requirements Coverage (40%)",

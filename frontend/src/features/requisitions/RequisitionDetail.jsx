@@ -77,8 +77,13 @@ export const RequisitionDetail = () => {
 
           <button
             onClick={() => scoreMutation.mutate()}
-            disabled={scoreMutation.isPending}
-            className="px-3.5 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary/90 rounded-control flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50"
+            disabled={scoreMutation.isPending || !req.parsed_profile}
+            title={
+              req.parsed_profile
+                ? "Score every candidate in this pipeline against the ideal profile"
+                : "Parse the job description first — scoring needs an ideal profile to compare against"
+            }
+            className="px-3.5 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary/90 rounded-control flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {scoreMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
             Score All Candidates
@@ -92,6 +97,21 @@ export const RequisitionDetail = () => {
           </Link>
         </div>
       </PageHeader>
+
+      {/* Failures here used to be swallowed: the mutation rejected, nothing rendered, and
+          the pipeline just stayed "(Unscored)" with no clue why. */}
+      {scoreMutation.isError && (
+        <div className="mb-4 p-3 rounded-card border border-danger/30 bg-danger/5 text-xs text-danger">
+          <span className="font-semibold">Scoring could not start: </span>
+          {scoreMutation.error?.message || "Unknown error."}
+        </div>
+      )}
+      {parseMutation.isError && (
+        <div className="mb-4 p-3 rounded-card border border-danger/30 bg-danger/5 text-xs text-danger">
+          <span className="font-semibold">Parse failed: </span>
+          {parseMutation.error?.message || "Unknown error."}
+        </div>
+      )}
 
       {/* Background Job Progress Bar */}
       {currentJobId && (

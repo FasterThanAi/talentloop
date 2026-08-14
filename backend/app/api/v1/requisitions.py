@@ -125,6 +125,29 @@ async def score_all_candidates(
     current_user: User = Depends(require_scope("recruiter")),
     db: Session = Depends(get_db)
 ):
+    # Scoring compares a candidate against the ideal profile, so refuse the run rather than
+    # queueing a job that can only fail per-entry.
+    req = db.execute(
+        select(Requisition).where(Requisition.id == id, Requisition.org_id == current_user.org_id)
+    ).scalar_one_or_none()
+    if not req:
+        raise HTTPException(status_code=404, detail="Requisition not found")
+    if not req.parsed_profile:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "type": "about:blank",
+                "title": "Job description not parsed",
+                "status": 400,
+                "detail": (
+                    "This requisition has no ideal profile yet. Open the requisition and run "
+                    "'Parse Job Description' first — scoring has nothing to compare against "
+                    "without it."
+                ),
+                "code": "PROFILE_NOT_PARSED",
+            },
+        )
+
     stmt = select(PipelineEntry.id).where(
         PipelineEntry.requisition_id == id,
         PipelineEntry.org_id == current_user.org_id

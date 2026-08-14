@@ -54,13 +54,21 @@ async def score_pipeline_entry(
     stmt = select(PipelineEntry).where(PipelineEntry.id == pipeline_entry_id)
     pe = db.execute(stmt).scalar_one_or_none()
     if not pe:
-        return None
+        raise ValueError(f"Pipeline entry {pipeline_entry_id} no longer exists.")
 
     # Load requisition
     stmt_req = select(Requisition).where(Requisition.id == pe.requisition_id)
     req = db.execute(stmt_req).scalar_one_or_none()
-    if not req or not req.parsed_profile:
-        return None
+    if not req:
+        raise ValueError(f"Requisition {pe.requisition_id} not found for entry {pe.id}.")
+    # Scoring is relative to the ideal profile, so an unparsed JD means there is nothing to
+    # score against. This used to `return None`, which looked identical to success and left
+    # every candidate showing "(Unscored)" with no explanation anywhere.
+    if not req.parsed_profile:
+        raise ValueError(
+            f"Requisition '{req.title}' has no parsed profile. "
+            "Run 'Parse Job Description' on the requisition before scoring."
+        )
 
     ideal_profile = IdealProfile.model_validate(req.parsed_profile)
 
@@ -157,8 +165,19 @@ async def score_pipeline_entry(
 
 
 async def handle_scoring_job(job_id: str, payload: dict[str, Any]) -> None:
-    pipeline_ids: list[str] = payload.get("pipeline_ids", [])
+    # The enqueuer sends "pipeline_entry_ids"; this handler used to read "pipeline_ids".
+    # The key never matched, so the list was always empty, the loop never ran, and the job
+    # went straight to "completed" with zero processed — a scoring run that silently did
+    # nothing. Read the canonical key, keep the old one as a fallback, and fail loudly on
+    # an empty list rather than reporting success.
+    pipeline_ids: list[str] = payload.get("pipeline_entry_ids") or payload.get("pipeline_ids") or []
     actor_id: str = payload.get("actor_id", "system")
+
+    if not pipeline_ids:
+        raise ValueError(
+            "Scoring job received no pipeline entry ids. Expected payload key "
+            f"'pipeline_entry_ids'; got keys {sorted(payload)}."
+        )
 
     db = SessionLocal()
     try:
