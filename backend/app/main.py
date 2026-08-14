@@ -77,7 +77,13 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware
+# ORDER MATTERS. Starlette applies middleware in REVERSE order of registration, so the
+# LAST one added is the OUTERMOST. CORS must be outermost: if it sits inside another
+# middleware and something further in fails, the error response goes back without
+# Access-Control-Allow-Origin, and the browser reports a misleading "blocked by CORS
+# policy" instead of the actual 500. Register Idempotency first, CORS last.
+app.add_middleware(IdempotencyMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
@@ -85,9 +91,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Idempotency Middleware for 24h key deduplication
-app.add_middleware(IdempotencyMiddleware)
 
 
 @app.exception_handler(HTTPException)
@@ -106,6 +109,30 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             "detail": detail_msg,
             "code": f"HTTP_{exc.status_code}"
         }
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """
+    Catch-all so an unexpected failure returns a readable problem-detail body instead of a
+    bare 500.
+
+    This also fixes a confusing symptom: an unhandled exception used to escape past the
+    CORS middleware, so the browser received a response with no Access-Control-Allow-Origin
+    header and reported "blocked by CORS policy" — hiding the real error entirely. Handling
+    it here keeps the response inside the CORS layer, so the frontend sees the actual cause.
+    """
+    logger.exception("Unhandled error on %s %s: %s", request.method, request.url.path, exc)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "type": "about:blank",
+            "title": "Internal server error",
+            "status": 500,
+            "detail": str(exc) or "An unexpected error occurred.",
+            "code": "INTERNAL_ERROR",
+        },
     )
 
 
