@@ -19,6 +19,10 @@ from app.schemas.ai import CandidateEvidence
 
 logger = logging.getLogger("talentloop.enrichment")
 
+# urllib's RobotFileParser accepts no timeout, so the only way to bound it is the global
+# socket default. Set it around the read and restore it immediately afterwards.
+ROBOTS_TIMEOUT_SECONDS = 5.0
+
 
 def is_safe_url(url: str) -> tuple[bool, str]:
     """
