@@ -90,7 +90,7 @@ GEMINI_API_KEY=<your key>
 JWT_SECRET=<a long random string — NOT the dev default>
 GMAIL_CLIENT_ID=<from Google Cloud Console>
 GMAIL_CLIENT_SECRET=<from Google Cloud Console>
-GEMINI_MODEL=gemini-2.0-flash
+GEMINI_MODEL=gemini-3.5-flash
 EMBEDDING_MODEL=text-embedding-004
 EMBEDDING_DIMENSION=768
 HUNTER_ENABLED=false
@@ -116,7 +116,7 @@ You want:
 
 ```json
 {"status":"ok","db":true,"pgvector":true,
- "db_dialect":"postgresql","vector_backend":"pgvector","ai_mode":"gemini-2.0-flash"}
+ "db_dialect":"postgresql","vector_backend":"pgvector","ai_mode":"gemini-3.5-flash"}
 ```
 
 Check each field — this endpoint exists precisely so you cannot deploy something broken
@@ -218,7 +218,7 @@ DATABASE_URL='<the same Supabase session-pooler URI>' python -m app.seed --reset
 
 Open your Vercel URL and walk the path:
 
-- [ ] No red banner at the top of the app (a banner means mock AI or SQLite — see §2.3)
+- [x] No red banner at the top of the app (a banner means mock AI or SQLite — see §2.3)
 - [ ] Register a recruiter → land on Requisitions
 - [ ] Reload the page → **still logged in** (this is the cross-site cookie test)
 - [ ] Sign in with Google → completes and lands correctly
