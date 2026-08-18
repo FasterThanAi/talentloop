@@ -1,13 +1,4 @@
-# TalentLoop — Agentic Hiring Assistant
 
-**Team 000 · RizeOS Hackathon 2026 · Round 2 Submission · AI Track + Full-Stack Track**
-
-TalentLoop reads a job description, sources and researches candidates, scores them against a
-transparent rubric with citations, drafts personalised outreach, triages replies, and returns a
-feedback report to every rejected candidate — with a human approving anything that leaves the
-system.
-
----
 
 ## 1. Live Links
 
