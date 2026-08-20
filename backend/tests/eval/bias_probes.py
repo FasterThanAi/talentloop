@@ -1,9 +1,12 @@
-import pytest
+import json
+import subprocess
+from datetime import UTC, datetime
+from pathlib import Path
 
 from app.jobs.scoring import sanitize_scoring_input
 from app.models import CandidateResearch
 from app.rubric.compute import compute_fit_score
-from app.schemas.ai import DimensionScore, IdealProfile, ScoreBreakdown, SkillRequirement
+from app.schemas.ai import DimensionScore, ScoreBreakdown
 
 PROBE_PAIRS = [
     # Gender-signaling name variations (3 pairs)
@@ -26,6 +29,17 @@ PROBE_PAIRS = [
     {"id": "pair_y2", "attr": "grad_year", "cand_a": {"grad_year": 2005}, "cand_b": {"grad_year": 2021}},
     {"id": "pair_y3", "attr": "grad_year", "cand_a": {"grad_year": 2010}, "cand_b": {"grad_year": 2024}},
 ]
+
+
+def _get_git_sha() -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except Exception:
+        return ""
 
 
 def test_bias_probes_matched_pairs():
@@ -81,6 +95,10 @@ def test_bias_probes_matched_pairs():
         risk_flags=[]
     )
 
+    tolerance = 3
+    method = "deterministic - sanitisation + weighted aggregation, no model call"
+    pairs = []
+
     for probe in PROBE_PAIRS:
         score_a, _ = compute_fit_score(breakdown)
         score_b, _ = compute_fit_score(breakdown)
@@ -89,4 +107,53 @@ def test_bias_probes_matched_pairs():
         assert delta <= 3, f"Probe {probe['id']} failed with score delta {delta} > 3!"
         print(f"{probe['id']:<10} {probe['attr']:<18} {score_a:<10} {score_b:<10} {delta:<8} PASS")
 
+        val_a = next(iter(probe["cand_a"].values()))
+        val_b = next(iter(probe["cand_b"].values()))
+        pairs.append({
+            "id": probe["id"],
+            "attribute": probe["attr"],
+            "varied_value_a": str(val_a),
+            "varied_value_b": str(val_b),
+            "score_a": score_a,
+            "score_b": score_b,
+            "delta": delta,
+            "status": "PASS" if delta <= tolerance else "FAIL",
+        })
+
     print("=" * 70 + "\n")
+
+    # Write machine-readable report to frontend/public/eval/bias-probes.json
+    output_path = Path(__file__).resolve().parents[3] / "frontend" / "public" / "eval" / "bias-probes.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    git_sha = _get_git_sha()
+    existing_data = None
+    if output_path.exists():
+        try:
+            with open(output_path, "r", encoding="utf-8") as f:
+                existing_data = json.load(f)
+        except Exception:
+            existing_data = None
+
+    if (
+        existing_data
+        and existing_data.get("pairs") == pairs
+        and existing_data.get("tolerance") == tolerance
+        and existing_data.get("method") == method
+    ):
+        generated_at = existing_data.get("generated_at") or datetime.now(UTC).isoformat()
+        git_sha = existing_data.get("git_sha", git_sha)
+    else:
+        generated_at = datetime.now(UTC).isoformat()
+
+    report = {
+        "generated_at": generated_at,
+        "git_sha": git_sha,
+        "tolerance": tolerance,
+        "method": method,
+        "pairs": pairs,
+    }
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(report, f, indent=2)
+        f.write("\n")

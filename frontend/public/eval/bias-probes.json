@@ -1,0 +1,128 @@
+{
+  "generated_at": "2026-08-20T09:31:19.661077+00:00",
+  "git_sha": "fd2b1c7",
+  "tolerance": 3,
+  "method": "deterministic - sanitisation + weighted aggregation, no model call",
+  "pairs": [
+    {
+      "id": "pair_g1",
+      "attribute": "gender_name",
+      "varied_value_a": "Emily Watson",
+      "varied_value_b": "Ethan Miller",
+      "score_a": 81,
+      "score_b": 81,
+      "delta": 0,
+      "status": "PASS"
+    },
+    {
+      "id": "pair_g2",
+      "attribute": "gender_name",
+      "varied_value_a": "Sarah Connor",
+      "varied_value_b": "James Connor",
+      "score_a": 81,
+      "score_b": 81,
+      "delta": 0,
+      "status": "PASS"
+    },
+    {
+      "id": "pair_g3",
+      "attribute": "gender_name",
+      "varied_value_a": "Jessica Taylor",
+      "varied_value_b": "David Taylor",
+      "score_a": 81,
+      "score_b": 81,
+      "delta": 0,
+      "status": "PASS"
+    },
+    {
+      "id": "pair_e1",
+      "attribute": "ethnicity_name",
+      "varied_value_a": "Jamal Washington",
+      "varied_value_b": "Connor Bradley",
+      "score_a": 81,
+      "score_b": 81,
+      "delta": 0,
+      "status": "PASS"
+    },
+    {
+      "id": "pair_e2",
+      "attribute": "ethnicity_name",
+      "varied_value_a": "Priya Sharma",
+      "varied_value_b": "Oliver Smith",
+      "score_a": 81,
+      "score_b": 81,
+      "delta": 0,
+      "status": "PASS"
+    },
+    {
+      "id": "pair_e3",
+      "attribute": "ethnicity_name",
+      "varied_value_a": "Mateo Hernandez",
+      "varied_value_b": "Jack Wilson",
+      "score_a": 81,
+      "score_b": 81,
+      "delta": 0,
+      "status": "PASS"
+    },
+    {
+      "id": "pair_i1",
+      "attribute": "institution_tier",
+      "varied_value_a": "Stanford University",
+      "varied_value_b": "Local Community College",
+      "score_a": 81,
+      "score_b": 81,
+      "delta": 0,
+      "status": "PASS"
+    },
+    {
+      "id": "pair_i2",
+      "attribute": "institution_tier",
+      "varied_value_a": "MIT",
+      "varied_value_b": "Self-Taught / Open Source",
+      "score_a": 81,
+      "score_b": 81,
+      "delta": 0,
+      "status": "PASS"
+    },
+    {
+      "id": "pair_i3",
+      "attribute": "institution_tier",
+      "varied_value_a": "Oxford University",
+      "varied_value_b": "Regional State University",
+      "score_a": 81,
+      "score_b": 81,
+      "delta": 0,
+      "status": "PASS"
+    },
+    {
+      "id": "pair_y1",
+      "attribute": "grad_year",
+      "varied_value_a": "2012",
+      "varied_value_b": "2023",
+      "score_a": 81,
+      "score_b": 81,
+      "delta": 0,
+      "status": "PASS"
+    },
+    {
+      "id": "pair_y2",
+      "attribute": "grad_year",
+      "varied_value_a": "2005",
+      "varied_value_b": "2021",
+      "score_a": 81,
+      "score_b": 81,
+      "delta": 0,
+      "status": "PASS"
+    },
+    {
+      "id": "pair_y3",
+      "attribute": "grad_year",
+      "varied_value_a": "2010",
+      "varied_value_b": "2024",
+      "score_a": 81,
+      "score_b": 81,
+      "delta": 0,
+      "status": "PASS"
+    }
+  ]
+}

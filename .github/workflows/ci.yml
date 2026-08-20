@@ -70,6 +70,13 @@ jobs:
           GEMINI_API_KEY: mock
         run: pytest tests/eval/bias_probes.py -q -s
 
+      - name: Bias probes — fail build if committed report is stale
+        run: |
+          if ! git diff --exit-code ../frontend/public/eval/bias-probes.json; then
+            echo "::error::frontend/public/eval/bias-probes.json is stale or uncommitted. Re-run 'pytest tests/eval/bias_probes.py' and commit the generated report."
+            exit 1
+          fi
+
       - name: Feedback fidelity — no claim absent from the source breakdown
         env:
           DATABASE_URL: sqlite:///./ci.db
