@@ -1,6 +1,6 @@
 # TalentLoop — Agentic Hiring Assistant
 
-**Team 000 · RizeOS Hackathon 2026 · Round 2 Submission · AI Track + Full-Stack Track**
+**Team 000 · RizeOS Hackathon 2026 · Round 3 Final Showcase · AI Track + Full-Stack Track**
 
 TalentLoop reads a job description, sources and researches candidates, scores them against a
 transparent rubric with citations, drafts personalised outreach, triages replies, and returns a
@@ -19,6 +19,7 @@ system.
 | **Health Check** | https://talentloop-api.onrender.com/api/v1/health |
 | **GitHub Repository** | https://github.com/FasterThanAi/talentloop |
 | **Demo Video (3 min)** | https://youtu.be/E8CvX2cyF_4 |
+| **Pitch Deck (PDF)** | [docs/TalentLoop_Round3_Pitch_Deck.pdf](docs/TalentLoop_Round3_Pitch_Deck.pdf) |
 
 ### Login credentials
 
@@ -423,6 +424,7 @@ Built for the **RizeOS Hackathon 2026** — AI Track and Full-Stack Track.
 | Document | Contents |
 |---|---|
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Render + Vercel + Supabase deployment, step by step |
+| [`docs/TalentLoop_Round3_Pitch_Deck.pdf`](docs/TalentLoop_Round3_Pitch_Deck.pdf) | Round 3 pitch deck |
 | [`docs/demo-script.md`](docs/demo-script.md) | The three-minute demo path |
 | [`docs/GIT-WORKFLOW.md`](docs/GIT-WORKFLOW.md) | Branching, review, and merge process |
 | [`docs/prompts/api-contract.md`](docs/prompts/api-contract.md) | Full API contract |
