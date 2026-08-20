@@ -18,7 +18,7 @@ system.
 | **API / Swagger Docs** | https://talentloop-api.onrender.com/docs |
 | **Health Check** | https://talentloop-api.onrender.com/api/v1/health |
 | **GitHub Repository** | https://github.com/FasterThanAi/talentloop |
-| **Demo Video (3 min)** | https://youtu.be/E8CvX2cyF_4 |
+| **Demo Video (3 min)** | https://www.youtube.com/watch?v=QVIJ2fh5eF8 |
 | **Pitch Deck (PDF)** | [docs/TalentLoop_Round3_Pitch_Deck.pdf](docs/TalentLoop_Round3_Pitch_Deck.pdf) |
 
 ### Login credentials
